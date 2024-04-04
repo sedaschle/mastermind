@@ -5,18 +5,20 @@
 main:-
     write('Welcome to Mastermind!'), nl,
     write('----------------------'), nl,
-    write('Enter the desired length of the sequence: '), read(RequiredLength),
-    play(RequiredLength).
+    write('Enter the desired length of the sequence, with a period at the end. (Max length: 15): '), read(RequiredLength),
+    write('Enter the desired number of colours, with a period at the end. (Max colours: 15): '), read(RequiredColours),
+    play(RequiredLength, RequiredColours).
 
-play(RequiredLength):-
-    generate_goal(Goal, RequiredLength),
-	colours(Colours),
+play(RequiredLength, RequiredColours):-
+    colours(C1),
+    pick_colours(C1, RequiredColours, Colours), % pick RequiredColours colours that this game will be played with 
+    generate_goal(Goal, RequiredLength, Colours),
     Guesses is 10,
     write('Game started. You have '), write(Guesses), write(' guesses.'), nl, nl,
     write('Colour options are: '), nl, write(Colours), nl,
-    make_guess(Goal, RequiredLength, Guesses).
+    make_guess(Goal, RequiredLength, Guesses, Colours).
 
-make_guess(Goal, RequiredLength, Guesses):-
+make_guess(Goal, RequiredLength, Guesses, Colours):-
     write('Enter a guess composed of '), write(RequiredLength), write(' colours, in the form ['),
     generate_print_color_list(RequiredLength, Placeholder),
     write(Placeholder), write('].'), nl,
@@ -25,7 +27,15 @@ make_guess(Goal, RequiredLength, Guesses):-
     (
         var(Guess),
         write('You cannot enter variables, try again.'), nl,
-        make_guess(Goal, RequiredLength, Guesses)
+        make_guess(Goal, RequiredLength, Guesses, Colours)
+    ;
+        not(is_set(Guess)),
+        write('Guess must not contain duplicates, try again.'), nl,
+        make_guess(Goal, RequiredLength, Guesses, Colours)
+    ;
+        not(forall(member(E,Guess), member(E,Colours))),
+        write('Guess must only contain colours from options, try again.'), nl,
+        make_guess(Goal, RequiredLength, Guesses, Colours)
     ;
         Guess = Goal,
         get_feedback(Goal, Guess, Feedback, RequiredLength),
@@ -47,7 +57,7 @@ make_guess(Goal, RequiredLength, Guesses):-
             NewGuesses is Guesses
         ),
         write('Remaining Guesses are '), write(NewGuesses), nl, nl,
-        make_guess(Goal, RequiredLength, NewGuesses)
+        make_guess(Goal, RequiredLength, NewGuesses, Colours)
     ).
 
 
@@ -63,12 +73,26 @@ pick_colours(List, N, [X|Goal]) :-
     pick_colours(Remaining, N1, Goal).
 
 % pick RequiredLength random colours from list of all colours
-generate_goal(Goal, RequiredLength) :-
-	colours(C),
+generate_goal(Goal, RequiredLength, C) :-
     pick_colours(C, RequiredLength, Goal).
 
-colours(C) :- 
-  C = [red, blue, green, yellow, orange, purple, pink, grey].
+colours(C) :-   
+    readFile(C).
+
+% citation: https://stackoverflow.com/questions/4805601/read-a-file-line-by-line-in-prolog 
+readFile(C):-
+    open('colours.txt', read, Str),
+    read_file(Str,C),
+    close(Str).
+
+read_file(Stream,[]) :-
+    at_end_of_stream(Stream).
+
+read_file(Stream,[X|L]) :-
+    \+ at_end_of_stream(Stream),
+    read(Stream,X),
+    read_file(Stream,L).
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % GENERATING FEEDBACK

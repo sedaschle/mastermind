@@ -1,0 +1,15 @@
+red.
+blue.
+green. 
+yellow.
+orange.
+purple.
+pink.
+grey.
+brown.
+teal.
+indigo.
+salmon.
+magenta.
+violet.
+black.
