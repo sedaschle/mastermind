@@ -5,19 +5,22 @@
 main:-
     write('Welcome to Mastermind!'), nl,
     write('----------------------'), nl,
-    play.
+    write('Enter the desired length of the sequence: '), read(RequiredLength),
+    play(RequiredLength).
 
-play:-
-    generate_goal(Goal),
+play(RequiredLength):-
+    generate_goal(Goal, RequiredLength),
 	colours(Colours),
-    Length is 4,
     Guesses is 10,
     write('Game started. You have '), write(Guesses), write(' guesses.'), nl, nl,
     write('Colour options are: '), nl, write(Colours), nl,
-    make_guess(Goal, Length, Guesses).
+    make_guess(Goal, RequiredLength, Guesses).
 
 make_guess(Goal, RequiredLength, Guesses):-
-    write('Enter a guess composed of '), write(RequiredLength), write(' colours, in the form [colour1, colour2, colour3, colour4]. :'), nl,
+    write('Enter a guess composed of '), write(RequiredLength), write(' colours, in the form ['),
+    generate_print_color_list(RequiredLength, Placeholder),
+    write(Placeholder), write('].'), nl,
+    % write(' colours, in the form [colour1, colour2, colour3, colour4]. :'), nl,
     read(Guess),
     (
         var(Guess),
@@ -25,7 +28,7 @@ make_guess(Goal, RequiredLength, Guesses):-
         make_guess(Goal, RequiredLength, Guesses)
     ;
         Guess = Goal,
-        get_feedback(Goal, Guess, Feedback),
+        get_feedback(Goal, Guess, Feedback, RequiredLength),
         write(Feedback), nl,
         write('You won!'), nl
     ;
@@ -36,7 +39,7 @@ make_guess(Goal, RequiredLength, Guesses):-
     ;
         (
             length(Guess, RequiredLength),            
-            get_feedback(Goal, Guess, Feedback),
+            get_feedback(Goal, Guess, Feedback, RequiredLength),
             write(Feedback), nl,
             NewGuesses is Guesses - 1
         ;
@@ -59,10 +62,10 @@ pick_colours(List, N, [X|Goal]) :-
     N1 is N - 1,
     pick_colours(Remaining, N1, Goal).
 
-% pick 4 random colours from list of all colours
-generate_goal(Goal) :-
+% pick RequiredLength random colours from list of all colours
+generate_goal(Goal, RequiredLength) :-
 	colours(C),
-    pick_colours(C, 4, Goal).
+    pick_colours(C, RequiredLength, Goal).
 
 colours(C) :- 
   C = [red, blue, green, yellow, orange, purple, pink, grey].
@@ -98,32 +101,36 @@ check([], 0, 0).
 
 % Recursive case: if RC and WC are both greater than 0, and the Head of the list is 'a',
 % recursively check the Tail with decremented RC.
-check([⚫|T], RC, WC) :-
+check(['!'|T], RC, WC) :-
     RC > 0,
     RC1 is RC - 1,
     check(T, RC1, WC).
 
 % Recursive case: if RC is 0 and WC is greater than 0, and the Head of the list is 'b',
 % recursively check the Tail with decremented WC.
-check([⚪|T], 0, WC) :-
+check(['?'|T], 0, WC) :-
     WC > 0,
     WC1 is WC - 1,
     check(T, 0, WC1).
 
-append_wrongs(List, Result) :-
+append_wrongs(List, Result, RequiredLength) :-
     length(List, Length),
-    Length < 4,
-    append(List, [⍉], NewList),
-    append_wrongs(NewList, Result).
+    Length < RequiredLength,
+    append(List, ['-'], NewList),
+    append_wrongs(NewList, Result, RequiredLength).
 
-append_wrongs(List, List) :-
-    length(List, 4).
+append_wrongs(List, List, RequiredLength) :-
+    length(List, RequiredLength).
 
-generate_list(RC, WC, Temp, Result) :-
+generate_list(RC, WC, Temp, Result, RequiredLength) :-
     check(Temp, RC, WC),
-    append_wrongs(Temp, Result),
-    length(Result, 4).
+    append_wrongs(Temp, Result, RequiredLength),
+    length(Result, RequiredLength).
 
-get_feedback(Goal, Ans, Feedback) :-
+get_feedback(Goal, Ans, Feedback, RequiredLength) :-
     feedback_counts(Goal, Ans, _, RC, WC),
-    generate_list(RC, WC, _, Feedback).
+    generate_list(RC, WC, _, Feedback, RequiredLength).
+
+generate_print_color_list(RequiredLength, Placeholder) :-
+    findall(X, (between(1, RequiredLength, Num), atom_concat('color', Num, X)), ColorList),
+    atomic_list_concat(ColorList, ', ', Placeholder).
