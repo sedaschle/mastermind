@@ -13,29 +13,53 @@ play(RequiredLength, RequiredColours):-
     colours(C1),
     pick_colours(C1, RequiredColours, Colours), % pick RequiredColours colours that this game will be played with 
     generate_goal(Goal, RequiredLength, Colours),
+    increasingList(GoalTracker, RequiredLength),
     Guesses is 10,
+    Hints is div(RequiredLength, 3),
     write('Game started. You have '), write(Guesses), write(' guesses.'), nl, nl,
     write('Colour options are: '), nl, write(Colours), nl,
-    make_guess(Goal, RequiredLength, Guesses, Colours).
+    make_guess(Goal, RequiredLength, Guesses, Colours, Hints, GoalTracker).
 
-make_guess(Goal, RequiredLength, Guesses, Colours):-
+increasingList(L, N):-
+    increasingList(L, N, 1).
+increasingList([], N, X) :-
+    X > N,
+    !.
+increasingList([X|L], N, X):-
+    X =< N,
+    X1 is X + 1,
+    increasingList(L, N, X1).
+
+make_guess(Goal, RequiredLength, Guesses, Colours, Hints, GoalTracker):-
     write('Enter a guess composed of '), write(RequiredLength), write(' colours, in the form ['),
     generate_print_color_list(RequiredLength, Placeholder),
-    write(Placeholder), write('].'), nl,
+    write(Placeholder), write(']. Type "Hint." for a hint. (You have '), write(Hints), write(' hints remaining)'), nl,
     % write(' colours, in the form [colour1, colour2, colour3, colour4]. :'), nl,
     read(Guess),
     (
+        Guess = "Hint.",
+        (        
+            Hints = 0,
+            write('No More Hints, You are on your own now :D'), nl,
+            make_guess(Goal, RequiredLength, Guesses, Colours, Hints, GoalTracker)
+            ;
+            write('Testing'), nl,
+            make_hint(Goal, GoalTracker, NewGoalTracker),
+            NewHints is Hints - 1,
+            make_guess(Goal, RequiredLength, Guesses, Colours, NewHints, NewGoalTracker)
+        )
+    ;
         var(Guess),
         write('You cannot enter variables, try again.'), nl,
-        make_guess(Goal, RequiredLength, Guesses, Colours)
+        make_guess(Goal, RequiredLength, Guesses, Colours, Hints, GoalTracker)
     ;
         not(is_set(Guess)),
         write('Guess must not contain duplicates, try again.'), nl,
-        make_guess(Goal, RequiredLength, Guesses, Colours)
+        make_guess(Goal, RequiredLength, Guesses, Colours, Hints, GoalTracker)
     ;
         not(forall(member(E,Guess), member(E,Colours))),
         write('Guess must only contain colours from options, try again.'), nl,
-        make_guess(Goal, RequiredLength, Guesses, Colours)
+        make_guess(Goal, RequiredLength, Guesses, Colours, Hints, GoalTracker)
     ;
         Guess = Goal,
         get_feedback(Goal, Guess, Feedback, RequiredLength),
@@ -57,9 +81,20 @@ make_guess(Goal, RequiredLength, Guesses, Colours):-
             NewGuesses is Guesses
         ),
         write('Remaining Guesses are '), write(NewGuesses), nl, nl,
-        make_guess(Goal, RequiredLength, NewGuesses, Colours)
+        make_guess(Goal, RequiredLength, NewGuesses, Colours, Hints, GoalTracker)
     ).
 
+make_hint(Goal, GoalTracker, NewGoalTracker) :-
+    length(GoalTracker, B),
+    C is random(B),
+    nth0(C, GoalTracker, Index),
+    nth1(Index, Goal, Hintelem),
+    write("The colour "), write(Hintelem), write(" is in position "), write(Index), write("."),nl,
+    remover(Index, GoalTracker, NewGoalTracker).
+
+remover( _, [], []).
+remover( R, [R|T], T).
+remover( R, [H|T], [H|T2]) :- H \= R, remover( R, T, T2).
 
 % Returns true if Goal contains N elements selected at random from List (colours)
 pick_colours(_, 0, []).
